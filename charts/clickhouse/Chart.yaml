@@ -3,8 +3,8 @@ apiVersion: v2
 name: clickhouse
 description: Fast column-oriented OLAP database with production-safe standalone defaults
 type: application
-version: 2.0.2
-appVersion: "26.8.3"
+version: 2.0.5
+appVersion: "26.9.16"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -24,7 +24,7 @@ icon: https://helmforge.dev/icons/charts/clickhouse.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "bump upstream to 26.8.3 (#1245)"
+      description: "bump app to 26.9.16 (#1497)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

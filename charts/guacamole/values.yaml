@@ -343,3 +343,26 @@ mysql:
     username: guacamole_user
     # -- Required when using the MySQL subchart
     password: ""
+
+# =============================================================================
+# External Secrets Operator
+# =============================================================================
+
+# -- External Secrets Operator integration
+externalSecrets:
+  # -- Enable External Secrets Operator integration
+  enabled: false
+  # -- Default SecretStore / ClusterSecretStore reference
+  secretStoreRef:
+    # -- SecretStore name
+    name: ""
+    # -- SecretStore kind (SecretStore or ClusterSecretStore)
+    kind: "SecretStore"
+  # -- Default refresh interval for external secrets
+  refreshInterval: "1h"
+  # -- Creation policy for target secrets (Owner, Merge, None)
+  creationPolicy: "Owner"
+  # -- Deletion policy for target secrets (Retain, Delete, Merge)
+  deletionPolicy: "Retain"
+  # -- List of ExternalSecret resources to create
+  items: []

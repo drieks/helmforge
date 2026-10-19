@@ -16,18 +16,20 @@ helm install matomo oci://ghcr.io/helmforgedev/helm/matomo
 
 ## Features
 
-- Official Matomo Apache image pinned to `5.13.0-apache`.
+- Official Matomo Apache image pinned to `5.14.0-apache`.
 - Bundled HelmForge MySQL subchart for simple deployments.
 - External MySQL/MariaDB mode for production.
 - CronJob-based `core:archive` execution.
 - Persistent Matomo application volume.
+- Automatic synchronization of image code into the persistent application volume.
 - Ingress and Gateway API HTTPRoute support.
 - NetworkPolicy, ServiceMonitor, dual-stack Service fields.
 - External Secrets integration for database passwords.
 
-Matomo 5.13.0 improves reporting and user management and includes maintenance
-and security fixes. Upstream reports no major database upgrade for this release;
-back up the database and persistent application volume before production rollout.
+Matomo 5.14.0 is the current stable production release. Review the
+[official changelog](https://matomo.org/changelog/matomo-5-14-0/), and back up
+the database and persistent application volume before production rollout so
+the native updater can be rolled back together with its data.
 
 ## Quick Start
 
@@ -62,17 +64,55 @@ ingress:
     - host: analytics.example.com
 ```
 
+## Upgrades
+
+The official image keeps its release code under `/usr/src/matomo`, while this
+chart persists `/var/www/html`. The `sync-matomo-code` init container copies the
+release files into the persistent volume on every web pod start, so changing
+`image.tag` also changes the code Matomo executes. The copy is additive: it
+overwrites files shipped by the image but retains PVC-only files such as
+`config/config.ini.php`, installed plugins, and `misc/user` content.
+
+The sync archives the entries inside `/usr/src/matomo` rather than the source
+directory itself, and preserves metadata on directories that already exist in
+the volume. This allows the init container to run as a non-root UID when the
+volume is writable through `podSecurityContext.fsGroup`; it does not need to
+change the ownership, mode, or timestamps of the volume root.
+
+The Deployment defaults to `updateStrategy.type=Recreate`, ensuring the old web
+pod is stopped before the new init container changes application files. Plan a
+brief maintenance window for image upgrades. Override this only when application
+code is not shared with a serving pod during rollout.
+
+Back up the database and PVC before changing `image.tag`. After the pod is
+running with the new code, apply any required database migrations during the
+planned maintenance window:
+
+```bash
+kubectl exec -n matomo deploy/matomo -- php /var/www/html/console core:update --yes --no-interaction
+```
+
+Set `persistence.codeSync.enabled=false` only when application files are managed
+outside the image lifecycle.
+
 ## Configuration
 
 | Parameter | Description | Default |
 | --- | --- | --- |
 | `replicaCount` | Matomo web replicas | `1` |
 | `image.repository` | Official Matomo image repository | `docker.io/library/matomo` |
-| `image.tag` | Official Matomo image tag | `5.13.0-apache` |
+| `image.tag` | Official Matomo image tag | `5.14.0-apache` |
 | `database.mode` | `auto`, `external`, or `mysql` | `auto` |
 | `mysql.enabled` | Deploy HelmForge MySQL subchart | `true` |
 | `persistence.enabled` | Persist `/var/www/html` | `true` |
+| `persistence.codeSync.enabled` | Synchronize image code into `/var/www/html` on pod start | `true` |
+| `persistence.codeSync.resources` | Resources for the code synchronization init container | `{}` |
 | `archiver.enabled` | Create archive CronJob | `true` |
+| `archiver.sameNodeAsMatomo` | Schedule the archiver with a web pod for RWO storage | `true` |
+| `archiver.nodeSelector` | Node selector for archiver pods | `{}` |
+| `archiver.tolerations` | Tolerations for archiver pods | `[]` |
+| `archiver.affinity` | Custom affinity that replaces generated same-node affinity | `{}` |
+| `updateStrategy.type` | Deployment rollout strategy | `Recreate` |
 | `ingress.enabled` | Render Ingress | `false` |
 | `gatewayAPI.enabled` | Render HTTPRoute resources | `false` |
 | `externalSecrets.enabled` | Render ExternalSecret resources | `false` |

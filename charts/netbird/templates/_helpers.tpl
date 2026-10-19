@@ -316,3 +316,15 @@ Validate chart values.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Public URL base for dashboard redirect URIs. Browsers serialize origins
+without the scheme default port, and the embedded identity provider compares
+redirect URIs with exact string equality, so strip :443 for https and :80 for
+http here. server.publicUrl itself stays untouched for exposedAddress.
+*/}}
+{{- define "netbird.publicUrlRedirectBase" -}}
+{{- $u := .Values.server.publicUrl | trimSuffix "/" -}}
+{{- $u = regexReplaceAll "^(https://[^/?#]+):443([/?#]|$)" $u "${1}${2}" -}}
+{{- regexReplaceAll "^(http://[^/?#]+):80([/?#]|$)" $u "${1}${2}" -}}
+{{- end -}}

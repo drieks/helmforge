@@ -50,6 +50,15 @@ superset:
   loadExamples: false
   # -- Extra environment variables for all Superset containers
   extraEnv: []
+  # -- Install the built-in and additional Python packages when each Superset process starts.
+  # Disable only when using a custom image that already contains psycopg2-binary,
+  # redis, and every package listed in extraPythonPackages.
+  installPythonPackages: true
+  # -- Additional Python package specifications installed in every Superset process.
+  # Use package names with optional version constraints; URLs and environment markers
+  # are intentionally unsupported. Pin tested versions for reproducible deployments.
+  # For production, prefer an immutable custom image with dependencies preinstalled.
+  extraPythonPackages: []
   # -- Extra superset_config.py content merged into the ConfigMap
   extraConfig: ""
 
@@ -370,6 +379,17 @@ postgresql:
     username: superset
     # -- PostgreSQL password. Auto-generated if empty.
     password: ""
+  standalone:
+    persistence:
+      # -- Enable persistent storage for bundled PostgreSQL
+      enabled: true
+      # -- Storage class for bundled PostgreSQL. Empty uses the cluster default.
+      storageClass: ""
+      # -- Access modes for the bundled PostgreSQL PVC
+      accessModes:
+        - ReadWriteOnce
+      # -- Size of the bundled PostgreSQL PVC
+      size: 8Gi
 
 # =============================================================================
 # Redis Subchart
@@ -381,3 +401,14 @@ redis:
   auth:
     # -- Redis password. Auto-generated if empty.
     password: ""
+  standalone:
+    persistence:
+      # -- Enable persistent storage for bundled Redis
+      enabled: true
+      # -- Storage class for bundled Redis. Empty uses the cluster default.
+      storageClass: ""
+      # -- Access modes for the bundled Redis PVC
+      accessModes:
+        - ReadWriteOnce
+      # -- Size of the bundled Redis PVC
+      size: 8Gi

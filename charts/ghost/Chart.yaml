@@ -3,8 +3,8 @@ apiVersion: v2
 name: ghost
 description: Ghost modern publishing platform and headless CMS with MySQL backend
 type: application
-version: 1.2.7
-appVersion: "6.63.0"
+version: 1.2.11
+appVersion: "6.69.0"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -25,7 +25,7 @@ sources:
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "bump to 6.63.0 (#1240)"
+      description: "bump app to 6.69.0 (#1505)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -52,6 +52,6 @@ annotations:
     - url: https://artifacthub.io/packages/helm/helmforge/mysql
 dependencies:
   - name: mysql
-    version: 2.0.3
+    version: 2.1.0
     repository: oci://ghcr.io/helmforgedev/helm
     condition: mysql.enabled

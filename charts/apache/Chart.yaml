@@ -3,8 +3,8 @@ apiVersion: v2
 name: apache
 description: Apache HTTP Server Helm Chart with secure non-root defaults, custom content, Gateway API, and optional metrics
 type: application
-version: 1.0.6
-appVersion: "2.4.68"
+version: 1.0.7
+appVersion: "2.4.69"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -26,7 +26,7 @@ icon: https://helmforge.dev/icons/charts/apache.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "refresh upstream images and dependencies (#978)"
+      description: "bump app to 2.4.69 (#1490)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

@@ -3,8 +3,8 @@ apiVersion: v2
 name: jenkins
 description: Jenkins Helm Chart with secure controller defaults, JCasC, plugin bootstrap, Gateway API, and Kubernetes agent RBAC
 type: application
-version: 1.0.9
-appVersion: "2.568.3"
+version: 1.0.10
+appVersion: "2.580.1"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -28,7 +28,7 @@ icon: https://helmforge.dev/icons/charts/jenkins.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "bump jenkins to 2.568.3 lts (#1167)"
+      description: "bump app to 2.580.1 (#1509)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

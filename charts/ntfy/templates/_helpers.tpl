@@ -5,11 +5,38 @@
 
 {{/* Validate chart values before rendering resources. */}}
 {{- define "ntfy.validate" -}}
-{{- if and .Values.ntfy.database.enabled (empty .Values.ntfy.database.existingSecret) -}}
-{{- fail "ntfy.database.enabled requires ntfy.database.existingSecret" -}}
+{{- if .Values.oidc.enabled -}}
+  {{- if and (not .Values.oidc.existingSecret) (not .Values.oidc.clientSecret) -}}
+    {{- fail "ntfy: oidc.clientSecret or oidc.existingSecret must be provided when oidc.enabled is true" -}}
+  {{- end -}}
+{{- end -}}
+{{- if .Values.smtp.enabled -}}
+  {{- if not .Values.smtp.senderAddr -}}
+    {{- fail "ntfy: smtp.senderAddr is required when smtp.enabled is true" -}}
+  {{- end -}}
+{{- end -}}
+{{- if include "ntfy.databaseEnabled" . -}}
+  {{- if and (not .Values.postgresql.enabled) (not .Values.ntfy.database.existingSecret) (not .Values.ntfy.database.external.host) -}}
+    {{- fail "PostgreSQL is enabled but neither postgresql.enabled, ntfy.database.existingSecret, nor ntfy.database.external.host is configured" -}}
+  {{- end -}}
+  {{- if and .Values.postgresql.enabled (empty .Values.postgresql.auth.password) (empty .Values.postgresql.auth.existingSecret) -}}
+    {{- fail "postgresql.enabled=true requires postgresql.auth.password or postgresql.auth.existingSecret so ntfy can construct the database connection" -}}
+  {{- end -}}
+  {{- if and (eq .Values.ntfy.database.mode "postgresql") (not .Values.postgresql.enabled) (not .Values.ntfy.database.existingSecret) (empty .Values.ntfy.database.external.password) (empty .Values.ntfy.database.external.existingSecret) -}}
+    {{- fail "External PostgreSQL requires ntfy.database.external.password or ntfy.database.external.existingSecret" -}}
+  {{- end -}}
 {{- end -}}
 {{- if and .Values.externalSecrets.enabled (empty .Values.externalSecrets.items) -}}
 {{- fail "externalSecrets.items must contain at least one item when externalSecrets.enabled=true" -}}
+{{- end -}}
+{{- if and .Values.ntfy.admin.enabled .Values.ntfy.admin.existingSecret (empty .Values.ntfy.admin.existingSecretPasswordKey) -}}
+{{- fail "ntfy.admin.existingSecretPasswordKey must not be empty when ntfy.admin.existingSecret is configured" -}}
+{{- end -}}
+{{- if .Values.ntfy.metricsListenHttp -}}
+{{- $port := mustRegexFind "[0-9]+$" .Values.ntfy.metricsListenHttp | int -}}
+{{- if or (lt $port 1) (gt $port 65535) -}}
+{{- fail (printf "ntfy.metricsListenHttp must end with a valid port number (1-65535), got: %s" .Values.ntfy.metricsListenHttp) -}}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -60,4 +87,158 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- else -}}
 {{- printf "%s-data" (include "ntfy.fullname" .) -}}
 {{- end -}}
+{{- end -}}
+
+{{/* Metrics port number parsed from metricsListenHttp (e.g. :9090 -> 9090) */}}
+{{- define "ntfy.metricsPort" -}}
+{{- if .Values.ntfy.metricsListenHttp -}}
+{{- mustRegexFind "[0-9]+$" .Values.ntfy.metricsListenHttp | int -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Whether PostgreSQL database backend is enabled */}}
+{{- define "ntfy.databaseEnabled" -}}
+{{- if or .Values.postgresql.enabled (eq .Values.ntfy.database.mode "postgresql") .Values.ntfy.database.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/* Database host */}}
+{{- define "ntfy.dbHost" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- printf "%s-postgresql" .Release.Name -}}
+{{- else -}}
+{{- .Values.ntfy.database.external.host -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database port */}}
+{{- define "ntfy.dbPort" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- "5432" -}}
+{{- else -}}
+{{- .Values.ntfy.database.external.port | default "5432" -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database name */}}
+{{- define "ntfy.dbName" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.database | default "ntfy" -}}
+{{- else -}}
+{{- .Values.ntfy.database.external.name | default "ntfy" -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database username */}}
+{{- define "ntfy.dbUsername" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.username | default "ntfy" -}}
+{{- else -}}
+{{- .Values.ntfy.database.external.username | default "ntfy" -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database secret name containing database-url */}}
+{{- define "ntfy.dbSecretName" -}}
+{{- if .Values.ntfy.database.existingSecret -}}
+{{- .Values.ntfy.database.existingSecret -}}
+{{- else -}}
+{{- printf "%s-db" (include "ntfy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database secret key */}}
+{{- define "ntfy.dbSecretKey" -}}
+{{- if .Values.ntfy.database.existingSecret -}}
+{{- .Values.ntfy.database.existingSecretKey | default "database-url" -}}
+{{- else -}}
+{{- "database-url" -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Database password */}}
+{{- define "ntfy.dbPassword" -}}
+{{- if .Values.postgresql.enabled -}}
+{{- .Values.postgresql.auth.password -}}
+{{- else -}}
+{{- .Values.ntfy.database.external.password -}}
+{{- end -}}
+{{- end -}}
+
+{{/* PostgreSQL connection string */}}
+{{- define "ntfy.databaseUrl" -}}
+{{- $user := include "ntfy.dbUsername" . -}}
+{{- $password := include "ntfy.dbPassword" . -}}
+{{- $host := include "ntfy.dbHost" . -}}
+{{- $port := include "ntfy.dbPort" . -}}
+{{- $db := include "ntfy.dbName" . -}}
+{{- printf "postgres://%s:%s@%s:%s/%s?sslmode=disable" (urlquery $user) (urlquery $password) $host $port $db -}}
+{{- end -}}
+
+{{/* Whether initial admin bootstrap is enabled */}}
+{{- define "ntfy.adminEnabled" -}}
+{{- if and .Values.ntfy.admin .Values.ntfy.admin.enabled -}}
+true
+{{- end -}}
+{{- end -}}
+
+{{/* Admin username */}}
+{{- define "ntfy.adminUsername" -}}
+{{- default "admin" .Values.ntfy.admin.username -}}
+{{- end -}}
+
+{{/* Admin Secret Name */}}
+{{- define "ntfy.adminSecretName" -}}
+{{- if .Values.ntfy.admin.existingSecret -}}
+{{- .Values.ntfy.admin.existingSecret -}}
+{{- else -}}
+{{- printf "%s-admin" (include "ntfy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* Admin Secret Password Key */}}
+{{- define "ntfy.adminSecretPasswordKey" -}}
+{{- if .Values.ntfy.admin.existingSecret -}}
+{{- .Values.ntfy.admin.existingSecretPasswordKey -}}
+{{- else -}}
+password
+{{- end -}}
+{{- end -}}
+
+{{/* S3 backup secret name */}}
+{{- define "ntfy.backupSecretName" -}}
+{{- if .Values.backup.s3.existingSecret -}}
+{{- .Values.backup.s3.existingSecret -}}
+{{- else -}}
+{{- printf "%s-backup-s3" (include "ntfy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* OIDC Secret Name */}}
+{{- define "ntfy.oidcSecretName" -}}
+{{- if .Values.oidc.existingSecret -}}
+{{- .Values.oidc.existingSecret -}}
+{{- else -}}
+{{- printf "%s-oidc" (include "ntfy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* OIDC Secret Key */}}
+{{- define "ntfy.oidcSecretKey" -}}
+{{- .Values.oidc.existingSecretKey | default "client-secret" -}}
+{{- end -}}
+
+{{/* SMTP Secret Name */}}
+{{- define "ntfy.smtpSecretName" -}}
+{{- if .Values.smtp.existingSecret -}}
+{{- .Values.smtp.existingSecret -}}
+{{- else -}}
+{{- printf "%s-smtp" (include "ntfy.fullname" .) -}}
+{{- end -}}
+{{- end -}}
+
+{{/* SMTP Secret Password Key */}}
+{{- define "ntfy.smtpSecretPasswordKey" -}}
+{{- .Values.smtp.existingSecretPasswordKey | default "smtp-password" -}}
 {{- end -}}

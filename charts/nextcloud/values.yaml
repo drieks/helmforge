@@ -10,7 +10,7 @@ image:
   # -- Official image repository.
   repository: docker.io/library/nextcloud
   # -- Pinned application release.
-  tag: "34.0.4-apache"
+  tag: "35.0.1-apache"
   # -- Image pull policy.
   pullPolicy: IfNotPresent
 # -- Registry authentication Secret references.
@@ -45,15 +45,68 @@ php:
   memoryLimit: 512M
   # -- Maximum upload and POST body size.
   uploadLimit: 512M
-# -- Same-Pod background job worker.
+# -- Optional co-located Imaginary preview service.
+imaginary:
+  # -- Offload image previews to a co-located, private Imaginary process.
+  enabled: false
+  image:
+    # -- Official Nextcloud AIO Imaginary image, pinned by multi-platform digest.
+    repository: ghcr.io/nextcloud-releases/aio-imaginary
+    # -- Immutable image digest (amd64 and arm64).
+    digest: sha256:ea96034f97e9921015001c43947ab88ee5516e7e793c4c753a3618feca9e8548
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Maximum source image resolution in megapixels.
+  maxAllowedResolution: 50
+  # -- Preview providers when Imaginary is enabled; PDF remains opt-in.
+  previewProviders:
+    - OC\Preview\TXT
+    - OC\Preview\MarkDown
+    - OC\Preview\OpenDocument
+    - OC\Preview\Krita
+    - OC\Preview\Imaginary
+  # -- Imaginary resource requests and limits.
+  resources:
+    requests: {cpu: 25m, memory: 128Mi}
+    limits: {cpu: "1", memory: 512Mi}
+
+# -- Optional co-located Client Push daemon.
+notifyPush:
+  # -- Run the official Client Push daemon; install and configure the Nextcloud app separately.
+  enabled: false
+  image:
+    # -- Official notify_push daemon image repository.
+    repository: ghcr.io/nextcloud/notify_push
+    # -- Pinned daemon version; keep the operator-managed app compatible.
+    tag: v1.4.1
+    # -- Image pull policy.
+    pullPolicy: IfNotPresent
+  # -- Client Push daemon resource requests and limits.
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 500m, memory: 128Mi}
+
+# -- Kubernetes-native background job scheduler.
 cron:
   # -- Enable Nextcloud cron processing.
   enabled: true
-  # -- Seconds between invocations; upstream recommends five minutes.
-  interval: 300
-  # -- Delay the first cron invocation after Pod startup, matching upstream timer guidance.
-  initialDelay: 300
-  # -- Worker resources.
+  # -- Cron schedule; upstream recommends every five minutes.
+  schedule: "*/5 * * * *"
+  # -- Suspend scheduling while retaining the CronJob for manual runs.
+  suspend: false
+  # -- Maximum delay for starting a missed execution.
+  startingDeadlineSeconds: 300
+  # -- Maximum execution duration.
+  activeDeadlineSeconds: 900
+  # -- Successful Jobs retained for inspection.
+  successfulJobsHistoryLimit: 1
+  # -- Failed Jobs retained for diagnostics.
+  failedJobsHistoryLimit: 3
+  # -- Pod retries before an execution is marked failed.
+  backoffLimit: 0
+  # -- Optional affinity override; the default pins cron to the application node for RWO volumes.
+  affinity: {}
+  # -- CronJob resources.
   resources:
     requests: {cpu: 25m, memory: 128Mi}
     limits: {cpu: 500m, memory: 512Mi}
@@ -218,7 +271,7 @@ backup:
   suspend: false
   # -- Maximum total job duration in seconds.
   activeDeadlineSeconds: 7200
-  # -- Maximum time to wait for web and cron termination.
+  # -- Maximum time to suspend cron and stop application writers.
   quiesceTimeout: 180
   # -- Successful job history.
   successfulJobsHistoryLimit: 1

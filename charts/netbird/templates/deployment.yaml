@@ -23,7 +23,8 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
       annotations:
-        checksum/config: {{ dict "publicUrl" .Values.server.publicUrl "authSecret" .Values.server.authSecret "disableAnonymousMetrics" .Values.server.disableAnonymousMetrics "disableGeoliteUpdate" .Values.server.disableGeoliteUpdate "config" .Values.server.config "auth" .Values.server.auth "store" .Values.server.store "persistence" .Values.persistence.mountPath | toJson | sha256sum }}
+        {{/* Include the rendered redirect base so upgrades from the pre-normalization config restart the server. */}}
+        checksum/config: {{ dict "publicUrl" .Values.server.publicUrl "redirectBase" (include "netbird.publicUrlRedirectBase" .) "authSecret" .Values.server.authSecret "disableAnonymousMetrics" .Values.server.disableAnonymousMetrics "disableGeoliteUpdate" .Values.server.disableGeoliteUpdate "config" .Values.server.config "auth" .Values.server.auth "store" .Values.server.store "persistence" .Values.persistence.mountPath | toJson | sha256sum }}
         checksum/pod-settings: {{ dict "env" .Values.server.env "envFrom" .Values.server.envFrom "probes" .Values.server.probes "globalProbes" .Values.probes | toJson | sha256sum }}
         {{- with .Values.podAnnotations }}
         {{- toYaml . | nindent 8 }}

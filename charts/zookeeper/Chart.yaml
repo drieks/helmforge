@@ -3,8 +3,8 @@ apiVersion: v2
 name: zookeeper
 description: Apache ZooKeeper Helm chart for production-ready replicated coordination ensembles
 type: application
-version: 1.0.2
-appVersion: "3.9.5"
+version: 1.1.0
+appVersion: "3.9.6"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -23,8 +23,8 @@ sources:
 icon: https://helmforge.dev/icons/charts/zookeeper.png
 annotations:
   artifacthub.io/changes: |
-    - kind: fixed
-      description: "complete chart standards (#528)"
+    - kind: added
+      description: "add extraEgress to networkpolicy and standardize notes (#1569)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

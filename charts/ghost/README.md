@@ -106,7 +106,7 @@ through Ghost's environment-based configuration:
 ```yaml
 image:
   repository: registry.example.com/ghost-with-adapters
-  tag: "6.63.0"
+  tag: "6.69.0"
 
 ghost:
   extraEnv:
@@ -123,7 +123,7 @@ adapters when the container starts.
 | Key | Default | Description |
 |-----|---------|-------------|
 | `ghost.url` | `""` | Public URL of the Ghost instance |
-| `image.tag` | `6.63.0` | Ghost image tag |
+| `image.tag` | `6.69.0` | Ghost image tag |
 | `mysql.enabled` | `true` | Deploy MySQL subchart |
 | `mysql.image.tag` | `8.4.11` | MySQL image tag pinned to the Ghost-supported MySQL 8 major |
 | `persistence.enabled` | `true` | Enable content persistence |
@@ -137,9 +137,12 @@ adapters when the container starts.
 
 ## Upgrade Notes
 
-Ghost `6.63.0` adds Node 24 support, updates the Source theme, and fixes member
-preferences, plan-change reporting and tag search. It does not change the image's port, content
-path, database contract, probes, or required environment variables.
+Ghost `6.69.0` adds automation analytics, self-service site exports, member
+location maps and refreshed post/member screens. It also fixes scheduled-post
+races, member imports, Portal pricing and initialization, uploads, editor
+freezes, social previews and analytics links. Releases 6.66.0 through 6.69.0 do
+not document a breaking database or configuration change. Review the
+[official release](https://github.com/TryGhost/Ghost/releases/tag/v6.69.0).
 Files edited in Ghost Admin remain under `/var/lib/ghost/content/data`, so the
 chart's content PVC and S3 content backup already cover them. Review the
 upstream Ghost release notes before upgrading

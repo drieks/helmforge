@@ -3,8 +3,8 @@ apiVersion: v2
 name: elasticsearch
 description: Production-ready Elasticsearch cluster with intelligent presets, automated backups, ILM policies, and multi-role architecture
 type: application
-version: 1.1.8
-appVersion: "9.5.3"
+version: 1.1.9
+appVersion: "9.5.5"
 kubeVersion: ">=1.26.0-0"
 icon: https://helmforge.dev/icons/charts/elasticsearch.png
 home: https://helmforge.dev
@@ -26,8 +26,8 @@ sources:
   - https://hub.docker.com/_/elasticsearch
 annotations:
   artifacthub.io/changes: |
-    - kind: fixed
-      description: "preserve credentials on 9.5.3 upgrade (#1178)"
+    - kind: changed
+      description: "bump app to 9.5.5 (#1503)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

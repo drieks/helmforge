@@ -1,0 +1,71 @@
+# SPDX-License-Identifier: Apache-2.0
+suite: netbird server config
+templates:
+  - templates/secret-config.yaml
+tests:
+  - it: renders dashboard redirect URIs from the default public URL
+    asserts:
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com/nb-auth"'
+        template: templates/secret-config.yaml
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com/nb-silent-auth"'
+        template: templates/secret-config.yaml
+  - it: strips the default https port from dashboard redirect URIs only
+    set:
+      server.publicUrl: https://netbird.example.com:443
+    asserts:
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com/nb-auth"'
+        template: templates/secret-config.yaml
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com/nb-silent-auth"'
+        template: templates/secret-config.yaml
+      - notMatchRegex:
+          path: stringData["config.yaml"]
+          pattern: ':443/nb-auth'
+        template: templates/secret-config.yaml
+      - notMatchRegex:
+          path: stringData["config.yaml"]
+          pattern: ':443/nb-silent-auth'
+        template: templates/secret-config.yaml
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: 'exposedAddress: "https://netbird\.example\.com:443"'
+        template: templates/secret-config.yaml
+  - it: keeps a non-default http port in dashboard redirect URIs
+    set:
+      server.publicUrl: http://netbird.example.com:443
+    asserts:
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "http://netbird\.example\.com:443/nb-auth"'
+        template: templates/secret-config.yaml
+  - it: strips the default http port from dashboard redirect URIs
+    set:
+      server.publicUrl: http://netbird.example.com:80
+    asserts:
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "http://netbird\.example\.com/nb-auth"'
+        template: templates/secret-config.yaml
+      - notMatchRegex:
+          path: stringData["config.yaml"]
+          pattern: ':80/nb-auth'
+        template: templates/secret-config.yaml
+  - it: keeps non-default ports that share a prefix with the default port
+    set:
+      server.publicUrl: https://netbird.example.com:4433
+    asserts:
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com:4433/nb-auth"'
+        template: templates/secret-config.yaml
+      - matchRegex:
+          path: stringData["config.yaml"]
+          pattern: '- "https://netbird\.example\.com:4433/nb-silent-auth"'
+        template: templates/secret-config.yaml

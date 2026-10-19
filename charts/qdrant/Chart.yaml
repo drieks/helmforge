@@ -3,8 +3,8 @@ apiVersion: v2
 name: qdrant
 description: Qdrant vector database
 type: application
-version: 1.0.5
-appVersion: "1.19.1"
+version: 1.0.6
+appVersion: "1.19.2"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -21,7 +21,7 @@ icon: https://helmforge.dev/icons/charts/qdrant.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "bump qdrant to 1.19.1 (#1160)"
+      description: "bump app to 1.19.2 (#1525)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev

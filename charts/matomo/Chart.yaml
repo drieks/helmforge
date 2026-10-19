@@ -3,8 +3,8 @@ apiVersion: v2
 name: matomo
 description: Privacy-focused web analytics platform with MySQL and production archiving support
 type: application
-version: 2.3.0
-appVersion: "5.13.0"
+version: 2.3.4
+appVersion: "5.14.0"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -23,8 +23,8 @@ sources:
 icon: https://helmforge.dev/icons/charts/matomo.png
 annotations:
   artifacthub.io/changes: |
-    - kind: added
-      description: "add possibility to define resources for the init container (#1124)"
+    - kind: fixed
+      description: "support non-root code synchronization (#1537)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -52,6 +52,6 @@ annotations:
     - url: https://artifacthub.io/packages/helm/helmforge/mysql
 dependencies:
   - name: mysql
-    version: 2.0.3
+    version: 2.1.0
     repository: oci://ghcr.io/helmforgedev/helm
     condition: mysql.enabled

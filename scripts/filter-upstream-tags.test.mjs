@@ -13,6 +13,16 @@ test('excludes Home Assistant tags while retaining future standalone major relea
 test('preserves calendar versions for other distributions', () => {
   assert.deepEqual(filterDistributionTags('docker.io/cloudflare/cloudflared', ['2026.8.3']), ['2026.8.3']);
 });
+test('excludes Valkey minor aliases that can point to release candidates', () => {
+  for (const repository of ['docker.io/valkey/valkey', 'valkey/valkey']) {
+    assert.deepEqual(filterDistributionTags(repository, ['9.1.2', '9.2', '9.2.0-rc1']), ['9.1.2', '9.2.0-rc1']);
+  }
+});
+test('excludes the known-broken Flowise 3.1.4 image', () => {
+  for (const repository of ['docker.io/flowiseai/flowise', 'flowiseai/flowise']) {
+    assert.deepEqual(filterDistributionTags(repository, ['3.1.3', '3.1.4', '3.1.5']), ['3.1.3', '3.1.5']);
+  }
+});
 test('filters newline-delimited registry output through the CLI', () => {
   const script = fileURLToPath(new URL('./filter-upstream-tags.mjs', import.meta.url));
   const output = execFileSync(process.execPath, [script, 'luligu/matterbridge'], {

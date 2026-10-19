@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# Pin every checksum input to the published 1.0.12 defaults so future default
+# changes cannot hide a regression in the redirect-normalization rollout.
+server:
+  publicUrl: https://netbird.example.com:443
+  authSecret: change-me-in-production
+  disableAnonymousMetrics: true
+  disableGeoliteUpdate: true
+  config:
+    existingSecret: ""
+    existingSecretKey: config.yaml
+    extraYaml: ""
+  auth:
+    issuer: https://netbird.example.com/oauth2
+    localAuthDisabled: false
+    signKeyRefreshEnabled: false
+    owner:
+      email: ""
+      password: ""
+  store:
+    engine: ""
+    dsn: ""
+    encryptionKey: ""
+persistence:
+  mountPath: /var/lib/netbird

@@ -3,8 +3,8 @@ apiVersion: v2
 name: ntfy
 description: ntfy self-hosted push notification service with HTTP-based pub-sub
 type: application
-version: 1.2.2
-appVersion: "v2.28.0"
+version: 1.6.2
+appVersion: "v2.31.1"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -23,8 +23,8 @@ sources:
   - https://github.com/binwiederhier/ntfy
 annotations:
   artifacthub.io/changes: |
-    - kind: changed
-      description: "bump app to 2.28.0 (#1119)"
+    - kind: fixed
+      description: "specify documentIndex for multi-document secret assertions (#1553)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -47,3 +47,8 @@ annotations:
       url: https://github.com/helmforgedev/charts/tree/main/charts/ntfy
     - name: support
       url: https://github.com/helmforgedev/charts/issues
+dependencies:
+  - name: postgresql
+    version: 2.0.5
+    repository: oci://ghcr.io/helmforgedev/helm
+    condition: postgresql.enabled

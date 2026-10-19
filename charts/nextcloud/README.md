@@ -12,7 +12,7 @@ PostgreSQL, Redis, managed background jobs and coordinated S3 backups.
 - An existing private S3-compatible bucket and credential Secret for backups.
 - External Secrets Operator only when that integration is enabled.
 
-The application defaults to `nextcloud:34.0.4-apache`, with verified amd64 and
+The application defaults to `nextcloud:35.0.1-apache`, with verified amd64 and
 arm64 support. The chart is Apache-2.0 licensed; Nextcloud Server is AGPL-3.0.
 One replica and Recreate updates provide an explicit single-writer operating
 model. Backups and upgrades have scheduled downtime.
@@ -50,7 +50,7 @@ The bootstrap password does not reset existing account passwords.
 - Automated native installation and guarded sequential application upgrades.
 - Persistent native configuration, instance identity, custom apps, themes and data.
 - Non-root Apache, read-only root filesystem, dropped capabilities and seccomp.
-- Co-located cron coordinated with the native initialization lock.
+- Kubernetes CronJob with native Job logs, status history and overlap prevention.
 - Existing Secret and External Secrets Operator contracts.
 - Explicit trusted hosts/proxies, SMTP, Ingress, Gateway API and dualstack Service.
 - Coordinated SQL/files backup, checksummed S3 publication and fresh-storage restore.
@@ -72,6 +72,32 @@ disable the corresponding subchart and provide `externalDatabase` or
 `externalRedis` settings. These external services must already exist. The chart
 supports PostgreSQL and standalone Redis; it does not perform database-engine
 conversion or configure Redis Sentinel/Cluster discovery.
+
+## Background jobs
+
+The chart runs Nextcloud background processing as a Kubernetes `CronJob` every
+five minutes, matching the upstream recommendation. Each one-shot Job uses the
+official application image, runs `cron.php` through PHP CLI as UID/GID 33 and
+records completion or failure in the Kubernetes Job history. `concurrencyPolicy:
+Forbid` prevents overlapping scheduled executions; `backoffLimit: 0` preserves
+the first failure for diagnosis rather than silently retrying it. A PVC-backed
+exclusive lock also serializes manually instantiated Jobs with scheduled runs.
+
+The CronJob mounts the application PVC and is pinned to the application Pod's
+node by default so `ReadWriteOnce` volumes work. `ReadWriteOncePod` cannot be used
+while cron is enabled. Inspect executions with `kubectl get jobs -l
+app.kubernetes.io/component=cron` and `kubectl logs job/<job-name> -c cron`.
+Set `cron.suspend: true` to retain manual Job support without scheduling runs.
+
+## Optional integrations
+
+Enable `imaginary.enabled` for private image-preview offloading and
+`notifyPush.enabled` for the official Client Push daemon. Both are opt-in, run
+in the application Pod and use official pinned images. Client Push uses the
+existing HTTPS endpoint at `/push` and requires a compatible operator-installed
+Nextcloud app plus the upstream setup test.
+
+See [setup, verification and lifecycle instructions](docs/integrations.md) before enabling them.
 
 ## Backup and restore
 
@@ -96,6 +122,11 @@ login, file contents/identities, shares, settings and new writes.
 - [Upgrades and migration from another chart](docs/upgrades.md)
 - [Architecture and tradeoffs](DESIGN.md)
 
+Nextcloud 35 is a major application upgrade. Release 35.0.1 fixes sharing,
+ownership transfer, encryption key-cache, sensitive logging, CalDAV and file
+metadata behavior. Back up the database, data PVC and configuration, confirm
+app compatibility, and upgrade only one major version at a time.
+
 ## Non-goals
 
 This chart does not provision office suites, Talk media relays, full-text search,
@@ -107,11 +138,11 @@ selected upstream release. Helm rollback cannot reverse database migrations.
 
 | Framework | Score |
 | --- | --- |
-| MITRE + NSA + SOC2 | **89.6104%** |
+| MITRE + NSA + SOC2 | **90.90909%** |
 
 > Security posture acceptable.
 
-Measured locally on 2026-09-14 with Kubescape 4.0.14 against the default rendered
+Measured locally on 2026-09-29 with Kubescape 4.0.9 against the default rendered
 application and bundled dependencies. The application uses a read-only root
 filesystem; the PostgreSQL/Redis subcharts retain their upstream filesystem
 defaults. This configuration assessment does not replace image CVE scanning.
@@ -130,7 +161,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 | `fullnameOverride` | Override the release resource name. | `""` |
 | `commonLabels` | Extra labels on resources. | `{}` |
 | `image.repository` | Official image repository. | `"docker.io/library/nextcloud"` |
-| `image.tag` | Pinned application release. | `"34.0.4-apache"` |
+| `image.tag` | Pinned application release. | `"35.0.1-apache"` |
 | `image.pullPolicy` | Image pull policy. | `"IfNotPresent"` |
 | `imagePullSecrets` | Registry authentication Secret references. | `[]` |
 | `nextcloud.adminUser` | Initial administrator login; changing this does not rename existing users. | `"admin"` |
@@ -146,9 +177,33 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 | `nextcloud.maintenanceWindowStart` | Start hour in UTC for expensive maintenance background tasks. | `1` |
 | `php.memoryLimit` | Maximum memory per PHP request. | `"512M"` |
 | `php.uploadLimit` | Maximum upload and POST body size. | `"512M"` |
+| `imaginary.enabled` | Enable private preview offloading. | `false` |
+| `imaginary.image.repository` | Official Nextcloud Imaginary image. | `"ghcr.io/nextcloud-releases/aio-imaginary"` |
+| `imaginary.image.digest` | Immutable multi-platform image digest. | `"sha256:ea96034f97e9921015001c43947ab88ee5516e7e793c4c753a3618feca9e8548"` |
+| `imaginary.image.pullPolicy` | Image pull policy. | `"IfNotPresent"` |
+| `imaginary.maxAllowedResolution` | Maximum source resolution in megapixels. | `50` |
+| `imaginary.previewProviders` | Preview providers when enabled. | `["OC\\Preview\\TXT","OC\\Preview\\MarkDown","OC\\Preview\\OpenDocument","OC\\Preview\\Krita","OC\\Preview\\Imaginary"]` |
+| `imaginary.resources.requests.cpu` | CPU request. | `"25m"` |
+| `imaginary.resources.requests.memory` | Memory request. | `"128Mi"` |
+| `imaginary.resources.limits.cpu` | CPU limit. | `"1"` |
+| `imaginary.resources.limits.memory` | Memory limit. | `"512Mi"` |
+| `notifyPush.enabled` | Enable the daemon; install and configure the Client Push app separately. | `false` |
+| `notifyPush.image.repository` | Official Client Push daemon image. | `"ghcr.io/nextcloud/notify_push"` |
+| `notifyPush.image.tag` | Pinned daemon version. | `"v1.4.1"` |
+| `notifyPush.image.pullPolicy` | Image pull policy. | `"IfNotPresent"` |
+| `notifyPush.resources.requests.cpu` | CPU request. | `"10m"` |
+| `notifyPush.resources.requests.memory` | Memory request. | `"32Mi"` |
+| `notifyPush.resources.limits.cpu` | CPU limit. | `"500m"` |
+| `notifyPush.resources.limits.memory` | Memory limit. | `"128Mi"` |
 | `cron.enabled` | Enable Nextcloud cron processing. | `true` |
-| `cron.interval` | Seconds between invocations; upstream recommends five minutes. | `300` |
-| `cron.initialDelay` | Delay the first cron invocation after Pod startup, matching upstream timer guidance. | `300` |
+| `cron.schedule` | Cron schedule; upstream recommends every five minutes. | `"*/5 * * * *"` |
+| `cron.suspend` | Suspend scheduling while retaining the CronJob for manual runs. | `false` |
+| `cron.startingDeadlineSeconds` | Maximum delay for starting a missed execution. | `300` |
+| `cron.activeDeadlineSeconds` | Maximum execution duration. | `900` |
+| `cron.successfulJobsHistoryLimit` | Successful Jobs retained for inspection. | `1` |
+| `cron.failedJobsHistoryLimit` | Failed Jobs retained for diagnostics. | `3` |
+| `cron.backoffLimit` | Pod retries before an execution is marked failed. | `0` |
+| `cron.affinity` | Optional affinity override; default pins cron to the application node. | `{}` |
 | `cron.resources.requests.cpu` | requests cpu | `"25m"` |
 | `cron.resources.requests.memory` | requests memory | `"128Mi"` |
 | `cron.resources.limits.cpu` | limits cpu | `"500m"` |
@@ -226,7 +281,7 @@ See [CONTRIBUTING.md](../../CONTRIBUTING.md).
 | `backup.schedule` | Cron schedule. | `"0 2 * * *"` |
 | `backup.suspend` | Suspend scheduling, retaining manual job support. | `false` |
 | `backup.activeDeadlineSeconds` | Maximum total job duration in seconds. | `7200` |
-| `backup.quiesceTimeout` | Maximum time to wait for web and cron termination. | `180` |
+| `backup.quiesceTimeout` | Maximum time to suspend cron and stop application writers. | `180` |
 | `backup.successfulJobsHistoryLimit` | Successful job history. | `1` |
 | `backup.failedJobsHistoryLimit` | Failed jobs retained for diagnostics. | `3` |
 | `backup.databaseImage` | Official SQL client; must match the PostgreSQL server major. | `"docker.io/library/postgres:18.6-trixie"` |

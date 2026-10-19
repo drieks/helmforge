@@ -178,14 +178,13 @@ topologySpreadConstraints:
 
 ## Upgrade Notes
 
-Cloudflared 2026.9.1 fixes Access token lock handling and QUIC registration error
-classification, updates the Go toolchain and base image, and retains the existing
-quick-tunnel and managed-token contracts. The `--transport-loglevel` flag was
-removed in 2026.9.0 but restored as deprecated in 2026.9.1. Origin URLs must use
-valid syntax, including brackets around IPv6 literals.
+Cloudflared 2026.10.0 retains the existing quick-tunnel and managed-token
+contracts. It improves QUIC request cancellation and DNS resolution retries.
+The new normalized-path access-rule behavior is present but disabled by default,
+so the forwarded request path and existing ingress selection remain unchanged.
 
 Review the
-[official 2026.9.1 release](https://github.com/cloudflare/cloudflared/releases/tag/2026.9.1)
+[official 2026.10.0 release](https://github.com/cloudflare/cloudflared/releases/tag/2026.10.0)
 before production rollout.
 
 ## Security Scan

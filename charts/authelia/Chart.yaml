@@ -3,8 +3,8 @@ apiVersion: v2
 name: authelia
 description: Authelia authentication and authorization server with SSO, MFA, and OpenID Connect
 type: application
-version: 1.5.11
-appVersion: "4.39.26"
+version: 1.5.15
+appVersion: "4.39.28"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -25,7 +25,7 @@ icon: https://helmforge.dev/icons/charts/authelia.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "bump upstream to 4.39.26 (#1243)"
+      description: "bump HelmForge subchart dependencies to latest minor/patch (#1428)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -58,10 +58,10 @@ dependencies:
     repository: oci://ghcr.io/helmforgedev/helm
     condition: postgresql.enabled
   - name: mysql
-    version: 2.0.3
+    version: 2.0.4
     repository: oci://ghcr.io/helmforgedev/helm
     condition: mysql.enabled
   - name: redis
-    version: 3.0.0
+    version: 3.0.2
     repository: oci://ghcr.io/helmforgedev/helm
     condition: redis.enabled

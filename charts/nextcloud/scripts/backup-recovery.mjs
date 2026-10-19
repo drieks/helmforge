@@ -14,6 +14,8 @@ export function verifyBackupRecovery(context, namespace, release, deployment, ad
   const helm = args => execFileSync('helm', args, { encoding: 'utf8', timeout: 960000, maxBuffer: 4 * 1024 * 1024 });
   const chart = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const source = JSON.parse(helm(['get', 'values', release, '--kube-context', context, '-n', namespace, '--all', '-o', 'json']));
+  source.imaginary ??= { enabled: false };
+  source.notifyPush ??= { enabled: false };
   const proofInput = { user: `hf-recovery-${randomBytes(4).toString('hex')}`, password: randomBytes(24).toString('base64url'), payload: randomBytes(1024 * 1024).toString('base64') };
   const proof = k(['exec', '-i', `deployment/${deployment}`, '-c', 'nextcloud', '--', 'php', '/opt/helmforge/recovery-smoke.php', 'seed'], JSON.stringify(proofInput));
   JSON.parse(proof);
@@ -30,6 +32,8 @@ export function verifyBackupRecovery(context, namespace, release, deployment, ad
   const restored = `${release.slice(0, 35)}-recovery`;
   const values = {
     image: source.image,
+    imaginary: source.imaginary,
+    notifyPush: source.notifyPush,
     nextcloud: { ...source.nextcloud, existingSecret: adminSecret, adminPassword: '' },
     backup: { ...source.backup, enabled: false },
     restore: { enabled: true, backupPath: prefix },
@@ -51,6 +55,12 @@ export function verifyBackupRecovery(context, namespace, release, deployment, ad
     const originalClaim = originalPods.find(p => !p.metadata.deletionTimestamp).spec.volumes.find(v => v.name === 'data').persistentVolumeClaim.claimName;
     if (restoredClaim === originalClaim) throw new Error('Recovery reused the source PVC');
     process.stdout.write(k(['exec', '-i', app.metadata.name, '-c', 'nextcloud', '--', 'php', '/opt/helmforge/recovery-smoke.php', 'verify'], proof));
+    if (source.imaginary.enabled) {
+      process.stdout.write(k(['exec', app.metadata.name, '-c', 'nextcloud', '--', 'php', '/opt/helmforge/smoke.php', restored, '80']));
+    }
+    if (source.notifyPush.enabled) {
+      process.stdout.write(k(['exec', app.metadata.name, '-c', 'nextcloud', '--', 'php', '/var/www/html/occ', 'notify_push:setup', 'http://127.0.0.1:8080/push']));
+    }
     const recoveredPods = JSON.parse(k(['get', 'pods', '-l', `app.kubernetes.io/instance=${restored}`, '-o', 'json'])).items;
     for (const recovered of recoveredPods) {
       for (const container of [...(recovered.status.initContainerStatuses ?? []), ...(recovered.status.containerStatuses ?? [])]) {

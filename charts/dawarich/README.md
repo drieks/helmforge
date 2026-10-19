@@ -50,15 +50,14 @@ If an existing Secret or
 explicit password is omitted, the chart generates and retains an initial
 credential. It does not reset an existing account when the credential changes.
 
-## Upgrade to 1.14.5
+## Upgrade to 1.15.3
 
-This release fixes mobile registration bypass and family-invitation email
-validation. The chart retains its explicit registration policy middleware.
-Review existing accounts on publicly reachable installations, back up PostGIS
-and persistent files, and preserve encryption secrets before upgrading.
-It also fixes JSON login throttling, several GPX/OwnTracks/Google Timeline
-imports, archive restoration and SMTP authentication set to `none`.
-See the [official release notes](https://github.com/Freika/dawarich/releases/tag/1.14.5).
+This release adds private trip sharing for family members, editable profile
+names, exact trip-to-map links and shared-achievement previews. It also fixes
+geocoding deduplication, GPX exports, queued test email and archived Immich
+photo filtering. Back up PostGIS and persistent files, and preserve encryption
+secrets before upgrading. See the
+[official release notes](https://github.com/Freika/dawarich/releases/tag/1.15.3).
 Redis dependency 3.0.0 retains its image, storage and authentication defaults
 and fixes TLS/custom-port health probes.
 
@@ -210,6 +209,6 @@ manifests; it does not replace image vulnerability management or application rev
 
 ## Sources
 
-- [Dawarich 1.14.5](https://github.com/Freika/dawarich/tree/1.14.5)
+- [Dawarich 1.15.3](https://github.com/Freika/dawarich/tree/1.15.3)
 - [Official PostGIS image](https://github.com/postgis/docker-postgis)
 - [Official unprivileged NGINX image](https://github.com/nginx/docker-nginx-unprivileged)

@@ -59,3 +59,8 @@ resources:
   limits:
     cpu: "1"
     memory: 1Gi
+
+taskRunners:
+  extraEnv:
+    - name: GENERIC_TIMEZONE
+      value: "UTC"

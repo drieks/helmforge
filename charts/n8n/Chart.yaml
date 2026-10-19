@@ -3,8 +3,8 @@ apiVersion: v2
 name: n8n
 description: n8n workflow automation platform with SQLite or PostgreSQL and optional Redis queue mode
 type: application
-version: 2.0.1
-appVersion: "2.39.5"
+version: 2.1.5
+appVersion: "2.43.4"
 kubeVersion: ">=1.26.0-0"
 maintainers:
   - name: helmforgedev
@@ -23,7 +23,7 @@ icon: https://helmforge.dev/icons/charts/n8n.png
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "upgrade upstream to 2.39.5 (#1246)"
+      description: "bump app to 2.43.4"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -55,6 +55,6 @@ dependencies:
     repository: oci://ghcr.io/helmforgedev/helm
     condition: postgresql.enabled
   - name: redis
-    version: 3.0.0
+    version: 3.0.2
     repository: oci://ghcr.io/helmforgedev/helm
     condition: redis.enabled

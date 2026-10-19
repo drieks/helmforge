@@ -3,8 +3,8 @@ apiVersion: v2
 name: nextcloud
 description: Nextcloud file collaboration with PostgreSQL, Redis and coordinated backups
 type: application
-version: 1.0.0
-appVersion: "34.0.4"
+version: 2.0.1
+appVersion: "35.0.1"
 kubeVersion: ">=1.29.0-0"
 home: https://helmforge.dev/docs/charts/nextcloud
 icon: https://helmforge.dev/icons/charts/nextcloud.png
@@ -19,7 +19,7 @@ maintainers:
 annotations:
   artifacthub.io/changes: |
     - kind: changed
-      description: "BREAKING: add chart"
+      description: "bump HelmForge subchart dependencies to latest minor/patch (#1428)"
   artifacthub.io/maintainers: |
     - name: HelmForge
       email: berlofa@helmforge.dev
@@ -38,6 +38,6 @@ dependencies:
     repository: oci://ghcr.io/helmforgedev/helm
     condition: postgresql.enabled
   - name: redis
-    version: 3.0.0
+    version: 3.0.2
     repository: oci://ghcr.io/helmforgedev/helm
     condition: redis.enabled

@@ -11,8 +11,11 @@ tests:
       - isKind:
           of: Deployment
       - equal:
+          path: spec.strategy.type
+          value: Recreate
+      - equal:
           path: spec.template.spec.containers[0].image
-          value: docker.io/library/matomo:5.13.0-apache
+          value: docker.io/library/matomo:5.14.0-apache
   - it: wires Matomo database environment variables
     template: deployment.yaml
     asserts:
@@ -34,3 +37,37 @@ tests:
       - equal:
           path: spec.template.spec.containers[0].volumeMounts[0].mountPath
           value: /var/www/html
+  - it: synchronizes image code without replacing volume root metadata
+    template: deployment.yaml
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[1].name
+          value: sync-matomo-code
+      - equal:
+          path: spec.template.spec.initContainers[1].image
+          value: docker.io/library/matomo:5.14.0-apache
+      - equal:
+          path: spec.template.spec.initContainers[1].volumeMounts[0].mountPath
+          value: /var/www/html
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].command[2]
+          pattern: 'cd /usr/src/matomo/'
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].command[2]
+          pattern: 'tar cf - --one-file-system \$\(ls -A\) \| tar xf - -C /var/www/html --no-overwrite-dir'
+      - matchRegex:
+          path: spec.template.spec.initContainers[1].command[2]
+          pattern: 'chown -R "\$\{user\}:\$\{group\}" /var/www/html'
+  - it: allows automatic code synchronization to be disabled
+    template: deployment.yaml
+    set:
+      persistence:
+        codeSync:
+          enabled: false
+    asserts:
+      - equal:
+          path: spec.template.spec.initContainers[0].name
+          value: wait-for-db
+      - lengthEqual:
+          path: spec.template.spec.initContainers
+          count: 1

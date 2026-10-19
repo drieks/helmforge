@@ -19,7 +19,7 @@ image:
   # -- Umami container image
   repository: ghcr.io/umami-software/umami
   # -- Image tag
-  tag: "3.3.1"
+  tag: "3.4.0"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -284,6 +284,8 @@ networkPolicy:
     allowHTTP: false
     # -- Additional NetworkPolicy egress peers
     extraTo: []
+    # -- Additional raw NetworkPolicy egress rules (HelmForge standard)
+    extraEgress: []
 
 # =============================================================================
 # Disruption Budget

@@ -29,7 +29,7 @@ helm install apache oci://ghcr.io/helmforgedev/helm/apache \
 
 ## Differentiators
 
-- Official Apache HTTP Server image only, pinned to `2.4.68`.
+- Official Apache HTTP Server image only, pinned to `2.4.69`.
 - Non-root runtime on port `8080` with `RuntimeDefault` seccomp and dropped
   Linux capabilities.
 - Read-only root filesystem with explicit writable `emptyDir` volumes for logs
@@ -196,6 +196,13 @@ networkPolicy:
 
 Set `allowInternet=true` only when Apache needs outbound access for proxying or
 remote content retrieval through extra configuration.
+
+## Upgrade Notes
+
+Apache HTTP Server 2.4.69 removes legacy RFC 2069 compatibility from
+`mod_auth_digest`. Deployments that inject custom Digest-auth configuration
+must ensure every client supports the RFC 2617 or later challenge format before
+upgrading. The chart does not enable `mod_auth_digest` by default.
 
 ## Validation
 

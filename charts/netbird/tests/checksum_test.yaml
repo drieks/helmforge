@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: Apache-2.0
+suite: netbird server config checksum
+templates:
+  - templates/deployment.yaml
+values:
+  - checksum-values.yaml
+tests:
+  - it: changes the published 1.0.12 checksum for the same HTTPS default-port values
+    documentIndex: 0
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 739dda3cbe7c597553d6587f8b19a3b955cc91a24e708ecbfe605e33ddf573d2
+      # SHA-256 of the pinned values dictionary plus the normalized redirectBase.
+      - equal:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 24e6ccfa60f5d1979b48e59337cf40eb0a9e1bb24688f6cac3f83603eaa4da9a
+  - it: changes the published 1.0.12 checksum for the same HTTP default-port values
+    documentIndex: 0
+    set:
+      server.publicUrl: http://netbird.example.com:80
+    asserts:
+      - notEqual:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 8f0d7c040faba6cf0d389d6f8f96cbc0e6f5aab765e5d493c79a27f01df69ec3
+      - equal:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 874576825929d41cbecbe1ac5813650cae2a53f9de6b849e7af271a35f175f0e
+  - it: keeps the checksum stable across release revisions and names
+    documentIndex: 0
+    release:
+      name: upgraded-netbird
+      namespace: upgraded-namespace
+      revision: 2
+      isUpgrade: true
+    asserts:
+      - equal:
+          path: spec.template.metadata.annotations["checksum/config"]
+          value: 24e6ccfa60f5d1979b48e59337cf40eb0a9e1bb24688f6cac3f83603eaa4da9a

@@ -23,8 +23,8 @@ commonLabels: {}
 image:
   # -- Official Apache ZooKeeper image repository
   repository: docker.io/library/zookeeper
-  # -- Official image tag. 3.9.5 contains security and bug fixes in the current 3.9 line.
-  tag: "3.9.5"
+  # -- Official image tag. 3.9.6 contains security and bug fixes in the current 3.9 line.
+  tag: "3.9.6"
   # -- Image pull policy
   pullPolicy: IfNotPresent
 
@@ -137,6 +137,9 @@ networkPolicy:
     # -- Allow egress from ZooKeeper pods to pods in the same namespace on client/admin/metrics ports.
     allowSameNamespace: false
     allowDns: true
+    # -- Additional egress rules for outbound traffic
+    extraEgress: []
+    # -- Deprecated alias for extraEgress
     extra: []
 
 # =============================================================================

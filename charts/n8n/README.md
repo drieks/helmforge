@@ -143,7 +143,7 @@ externalSecrets:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `image.repository` | `docker.io/n8nio/n8n` | n8n container image repository |
-| `image.tag` | `2.39.5` | n8n container image tag |
+| `image.tag` | `2.43.4` | n8n container image tag |
 | `n8n.encryptionKey` | `""` | Encryption key for credentials (auto-generated) |
 | `n8n.webhookUrl` | `""` | Webhook URL (auto-detected from ingress) |
 | `n8n.logLevel` | `info` | Log level (info, warn, error, debug) |
@@ -164,6 +164,7 @@ externalSecrets:
 | `taskRunners.autoShutdownTimeout` | `15` | External runner launcher idle shutdown timeout |
 | `taskRunners.authToken` | `""` | External runner auth token, auto-generated when empty |
 | `taskRunners.nativePython.enabled` | `false` | Enable native Python runner integration |
+| `taskRunners.extraEnv` | `[]` | Additional environment variables for external task runner containers in main and worker pods |
 | `persistence.enabled` | `true` | Enable persistent storage |
 | `persistence.size` | `5Gi` | PVC size |
 | `resources.requests.memory` | `512Mi` | Default memory request for the main pod |
@@ -184,14 +185,15 @@ externalSecrets:
 
 ## Upgrade Notes
 
-n8n `2.39.5` includes the 2.39 encryption bootstrap and wrapped-key fixes,
-runner shutdown ordering, queue cleanup, source-control CA handling and
-credential-revocation fixes. Back
+n8n `2.43.4` includes the 2.42 and 2.43 maintenance lines and fixes duplicate
+Chat Hub segment handling in queue mode and deferred tool-call resumption for
+tools loaded by a skill. Agents remain enabled by default; this does not add a
+Kubernetes workload or RBAC requirement. Back
 up the database and data volume, preserve the encryption key, and validate
 workflows and credentials in staging before upgrading. Keep the app and external
 runner tags aligned; an empty `taskRunners.image.tag` inherits `image.tag`.
 
-Use `helm upgrade --reset-then-reuse-values` with `image.tag=2.39.5` and update
+Use `helm upgrade --reset-then-reuse-values` with `image.tag=2.43.4` and update
 any separately pinned runner tag. Existing generated encryption keys and runner
 tokens are retained through Helm lookup; use existing Secrets for offline
 rendering or GitOps. Automatic database migrations require a recoverable backup.
@@ -204,7 +206,7 @@ version opens the same database. Plan for brief downtime. The Python toggle
 The Redis dependency moves to 3.0.0 with unchanged image, storage and
 authentication defaults and corrected TLS/custom-port probes. Review each
 intervening release from [2.39.0](https://github.com/n8n-io/n8n/releases/tag/n8n%402.39.0)
-through [2.39.5](https://github.com/n8n-io/n8n/releases/tag/n8n%402.39.5).
+through [2.43.4](https://github.com/n8n-io/n8n/releases/tag/n8n%402.43.4).
 For source-control HTTPS remotes with a private CA, `GIT_SSL_CAINFO` is now
 honored; mount the trust file and pass its path through the existing environment
 extension when needed.
@@ -233,6 +235,14 @@ to the main pod and each queue worker. This avoids the missing-Python warning
 produced by internal runner mode in the upstream `n8nio/n8n` image and gives
 each queue worker its own runner, as required by n8n external task runner
 architecture.
+
+Use `taskRunners.extraEnv` for runner-container settings such as
+`GENERIC_TIMEZONE`, `NODE_OPTIONS`, or `N8N_RUNNERS_MAX_OLD_SPACE_SIZE`. In
+external mode, Code node module allowlists such as
+`NODE_FUNCTION_ALLOW_BUILTIN` and `NODE_FUNCTION_ALLOW_EXTERNAL` must be set as
+`env-overrides` in `/etc/n8n-task-runners.json` inside the runner image; setting
+them only through `taskRunners.extraEnv` does not configure launched runners.
+See the [upstream task runner configuration](https://docs.n8n.io/deploy/host-n8n/configure-n8n/set-up-task-runners/).
 
 Anonymous diagnostics are disabled by default with
 `N8N_DIAGNOSTICS_ENABLED=false`, which keeps self-hosted clusters private and

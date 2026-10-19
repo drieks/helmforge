@@ -19,6 +19,13 @@ commonLabels: {}
 # -- Number of Docmost application replicas. Values greater than 1 require storage.mode=s3.
 replicaCount: 1
 
+# -- Deployment update strategy. When empty, defaults to Recreate if the local uploads
+# PVC is in use and RollingUpdate otherwise. The local PVC is ReadWriteOnce, so a rolling
+# update cannot converge: the new pod cannot attach the volume until the old pod releases
+# it, and the old pod is not terminated until the new pod is Ready. Set explicitly to
+# override, for example {type: RollingUpdate} when storage.mode is s3.
+strategy: {}
+
 image:
   # -- Docmost container image repository
   repository: docker.io/docmost/docmost
@@ -35,6 +42,12 @@ docmost:
   appUrl: ""
   # -- Secret key for application security. Auto-generated if empty.
   appSecret: ""
+  # -- Existing secret holding the app secret. Takes precedence over appSecret, and stops the
+  # chart from creating or rotating one, which matters for GitOps renderers where the cluster
+  # lookup this chart relies on is unavailable.
+  existingSecret: ""
+  # -- Secret key for the app secret in docmost.existingSecret
+  existingSecretAppSecretKey: app-secret
   # -- JWT expiration used by Docmost
   jwtTokenExpiresIn: 30d
   # -- Disable anonymous upstream telemetry collection

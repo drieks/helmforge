@@ -4,6 +4,36 @@ Matomo has two production-critical runtime domains: MySQL or MariaDB for
 analytics data, and the Matomo application volume for configuration, plugins,
 and generated assets. Back up both before upgrades.
 
+## Application Upgrades
+
+The official container only bootstraps `/var/www/html` when `matomo.php` is
+absent. Because the chart persists that directory, `persistence.codeSync` is
+enabled by default and synchronizes the release files from `/usr/src/matomo`
+before the web container starts. The synchronization overwrites image-managed
+files without deleting configuration, marketplace plugins, or other files that
+exist only on the PVC.
+
+The sync archives the source directory's top-level entries instead of the
+directory itself and preserves metadata on existing directories. A non-root init
+container can therefore write through an `fsGroup`-prepared volume without
+attempting to change the mode or timestamps of the volume root.
+
+The default `Recreate` Deployment strategy stops the old web pod before the new
+init container modifies the shared application volume. Treat image upgrades as
+a brief maintenance window. A `RollingUpdate` override is safe only when no
+serving pod shares application files with the synchronizing pod.
+
+Back up the database and application volume before changing `image.tag`. The
+chart deliberately does not run database migrations during every startup;
+after the new pod starts, execute `core:update` during a maintenance window:
+
+```bash
+kubectl exec -n matomo deploy/matomo -- php /var/www/html/console core:update --yes --no-interaction
+```
+
+Disable `persistence.codeSync.enabled` only when another process owns the
+application code lifecycle.
+
 ## Database
 
 For production, prefer `database.mode=external` with a managed MySQL or MariaDB
@@ -14,7 +44,14 @@ single-cluster installations.
 
 Enable the chart-managed `archiver` CronJob so reports are precomputed outside
 interactive user traffic. Start with the upstream hourly schedule at minute 5
-and tune resources when archive runs overlap.
+and tune resources when archive runs overlap. Runs that occur before the Matomo
+installer creates `config/config.ini.php` exit successfully without archiving.
+
+The archiver uses the same application PVC as the web pod. By default,
+`archiver.sameNodeAsMatomo=true` adds required pod affinity so a ReadWriteOnce
+volume is not attached from another node. Set it to `false` for storage that is
+safe across nodes, or provide `archiver.affinity` to replace the generated
+affinity. `archiver.nodeSelector` and `archiver.tolerations` are also available.
 
 ## Scaling
 

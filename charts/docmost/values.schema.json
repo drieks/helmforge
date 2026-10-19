@@ -26,6 +26,10 @@
       "type": "integer",
       "description": "Number of Docmost application replicas. Values greater than 1 require storage.mode=s3."
     },
+    "strategy": {
+      "type": "object",
+      "description": "Deployment update strategy. When empty, defaults to Recreate if the local uploads PVC is in use and RollingUpdate otherwise."
+    },
     "image": {
       "type": "object",
       "description": "Docmost image settings",
@@ -63,6 +67,14 @@
         "appSecret": {
           "type": "string",
           "description": "Secret key for application security. Auto-generated if empty."
+        },
+        "existingSecret": {
+          "type": "string",
+          "description": "Existing secret holding the app secret. Takes precedence over appSecret and stops the chart creating or rotating one."
+        },
+        "existingSecretAppSecretKey": {
+          "type": "string",
+          "description": "Secret key for the app secret in docmost.existingSecret."
         },
         "jwtTokenExpiresIn": {
           "type": "string",

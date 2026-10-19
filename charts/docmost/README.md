@@ -47,7 +47,9 @@ helm install docmost oci://ghcr.io/helmforgedev/helm/docmost
 Keep `APP_SECRET` stable: the new AES-256-GCM encryption service derives its
 key from this existing secret. Back up PostgreSQL and uploaded files before
 upgrading. The chart reuses its generated application Secret on connected Helm
-upgrades; explicitly manage `docmost.appSecret` when rendering offline.
+upgrades; explicitly manage `docmost.appSecret` when rendering offline, or point
+`docmost.existingSecret` at a secret you own so the chart neither creates nor
+rotates one.
 
 This release updates Node and collaboration services, adds page-version
 comparison and attachments, fixes Redis ACL/URL/TLS handling, and includes
@@ -165,10 +167,13 @@ backup:
 | Key | Default | Description |
 |-----|---------|-------------|
 | `replicaCount` | `1` | Number of Docmost application pods. Values greater than `1` require `storage.mode=s3` |
+| `strategy` | `{}` | Deployment update strategy. Defaults to `Recreate` while the local uploads PVC is in use, since that volume is `ReadWriteOnce`, and to `RollingUpdate` otherwise |
 | `image.repository` | `docker.io/docmost/docmost` | Docmost container image repository |
 | `image.tag` | `0.96.0` | Docmost image tag |
 | `docmost.appUrl` | `""` | External Docmost URL |
 | `docmost.appSecret` | `""` | Application secret, auto-generated when empty |
+| `docmost.existingSecret` | `""` | Existing secret holding the app secret. Takes precedence over `appSecret` and stops the chart creating or rotating one |
+| `docmost.existingSecretAppSecretKey` | `app-secret` | Key for the app secret inside `docmost.existingSecret` |
 | `docmost.jwtTokenExpiresIn` | `30d` | JWT expiration |
 | `docmost.disableTelemetry` | `false` | Disable anonymous upstream telemetry collection |
 | `database.mode` | `auto` | Database mode: `auto`, `external`, `postgresql` |

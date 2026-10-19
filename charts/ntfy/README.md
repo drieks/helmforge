@@ -98,8 +98,34 @@ ntfy:
 
 ## PostgreSQL
 
-Create a Secret containing the complete PostgreSQL connection URL, then enable
-the database integration:
+### Embedded PostgreSQL (Subchart)
+
+Deploy an integrated PostgreSQL instance managed by the HelmForge PostgreSQL subchart:
+
+```yaml
+postgresql:
+  enabled: true
+  auth:
+    password: "choose-a-strong-password"
+```
+
+### External PostgreSQL
+
+Connect to an existing PostgreSQL database directly via values:
+
+```yaml
+ntfy:
+  database:
+    mode: postgresql
+    external:
+      host: postgres.example.com
+      port: 5432
+      name: ntfy
+      username: ntfy
+      password: "choose-a-strong-password"
+```
+
+Alternatively, reference a pre-created Secret containing the complete PostgreSQL connection URL:
 
 ```bash
 kubectl create secret generic ntfy-database \
@@ -163,6 +189,23 @@ containers, rotating the target Secret does not update `NTFY_DATABASE_URL` in
 an existing ntfy pod. Trigger a Deployment rollout after rotation, or configure
 a compatible restart controller to restart the workload when the Secret changes.
 
+## Administrator Bootstrap
+
+Create an initial administrator account automatically when authentication is enforced (e.g. `authDefaultAccess: "deny-all"`):
+
+```yaml
+ntfy:
+  authDefaultAccess: "deny-all"
+  admin:
+    enabled: true
+    username: "admin"
+    # Inline password or leave empty to auto-generate a secure random 32-character password in a managed Secret
+    password: "InitialSecretPass123!"
+    # Or reference an existing Secret
+    # existingSecret: "ntfy-admin-credentials"
+    # existingSecretPasswordKey: "password"
+```
+
 ## Prometheus Metrics
 
 Enable the built-in Prometheus metrics endpoint:
@@ -224,12 +267,11 @@ service:
 
 ## Upgrade Notes
 
-ntfy 2.28.0 hardens message and cache limits. Titles are limited to 1 KiB,
-combined tags to 512 bytes, and cache replay to 10 MiB. Cache replay now counts
-toward daily visitor bandwidth and can return HTTP 429; large deployments may
-need to review `visitor-attachment-daily-bandwidth-limit`. Clients should also
-handle `X-Messages-Truncated` on capped replay responses. Back up persistent
-state and validate publishing and replay workflows before rollout.
+ntfy 2.31.1 upgrades the message database schema (version 16 to 17) to optimize
+topic reconnects with a dedicated index on SQLite and PostgreSQL. The schema migration
+is automatic upon startup. It also allows starting with a warning when a database
+schema is newer than supported, simplifying rollbacks. Back up persistent state before
+rollout and review the [2.31.1 release](https://github.com/binwiederhier/ntfy/releases/tag/v2.31.1).
 
 ## Limitations
 
@@ -250,3 +292,48 @@ state and validate publishing and replay workflows before rollout.
 | MITRE + NSA + SOC2 | **74.242424%** |
 
 > Security posture acceptable.
+
+## Backup and Restore
+
+ntfy supports automated scheduled backups to any S3-compatible object storage (e.g. MinIO, AWS S3, Cloudflare R2).
+
+### Backup Architecture
+
+The backup CronJob () runs on a customizable schedule (default: ). It performs the following:
+1. **Archive ()**: creates a compressed tarball containing SQLite databases (, ) and user attachment files from .
+2. **Upload ()**: uploads the archive using the official HelmForge MinIO client () to the designated S3 bucket and prefix.
+
+### Enabling S3 Backup
+
+
+
+### Restore Procedure
+
+1. Scale down the ntfy deployment:
+   
+2. Download the backup archive from S3 using :
+   
+3. Extract the archive into the ntfy persistent volume or cache directory ():
+   
+4. Scale the deployment back up:
+   
+
+## SSO (OpenID Connect) and SMTP
+
+ntfy supports native integration with OpenID Connect (OIDC) identity providers and outbound SMTP email alerting.
+
+### Single Sign-On (OIDC)
+
+To configure SSO with an OIDC provider (e.g. Authentik, Keycloak, Authelia):
+
+
+
+Sensitive client secrets are injected exclusively via Kubernetes Secrets and environment variables (), ensuring zero secrets in ConfigMaps.
+
+### Outbound SMTP Email
+
+To allow email notifications ( header):
+
+
+
+Sensitive passwords are bound via  ().

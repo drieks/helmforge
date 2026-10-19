@@ -134,7 +134,7 @@ tests:
           value: task-runners
       - equal:
           path: spec.template.spec.containers[1].image
-          value: "docker.io/n8nio/runners:2.39.5"
+          value: "docker.io/n8nio/runners:2.43.4"
       - contains:
           path: spec.template.spec.containers[1].env
           content:
@@ -150,6 +150,23 @@ tests:
           content:
             name: N8N_PYTHON_ENABLED
             value: "false"
+
+  - it: should add extra env vars to the worker task runner
+    template: templates/worker-deployment.yaml
+    set:
+      queue.enabled: true
+      redis.enabled: true
+      postgresql.enabled: true
+      postgresql.auth.password: pgpass
+      taskRunners.extraEnv:
+        - name: GENERIC_TIMEZONE
+          value: "UTC"
+    asserts:
+      - contains:
+          path: spec.template.spec.containers[1].env
+          content:
+            name: GENERIC_TIMEZONE
+            value: "UTC"
 
   - it: should disable diagnostics by default on workers
     template: templates/worker-deployment.yaml

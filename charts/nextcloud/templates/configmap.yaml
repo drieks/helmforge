@@ -7,7 +7,9 @@ metadata:
     {{- include "nextcloud.labels" . | nindent 4 }}
 data:
   runtime-settings.json: |
-    {{- dict "cron" .Values.cron | toJson | nindent 4 }}
+    {{- dict "cron" .Values.cron "imaginary" .Values.imaginary "notifyPush" .Values.notifyPush | toJson | nindent 4 }}
+  prepare-push.php: |
+    {{- .Files.Get "files/prepare-push.php" | nindent 4 }}
   smoke.php: |
     {{- .Files.Get "files/smoke.php" | nindent 4 }}
   recovery-smoke.php: |
@@ -34,6 +36,14 @@ data:
     ];
     if ($settings['overwriteProtocol'] !== '') $CONFIG['overwriteprotocol'] = $settings['overwriteProtocol'];
     if ($settings['overwriteHost'] !== '') $CONFIG['overwritehost'] = $settings['overwriteHost'];
+    {{- if .Values.imaginary.enabled }}
+    $CONFIG['enabledPreviewProviders'] = json_decode({{ .Values.imaginary.previewProviders | toJson | toJson }}, true);
+    $CONFIG['preview_imaginary_url'] = 'http://127.0.0.1:9000';
+    {{- end }}
+    {{- if .Values.notifyPush.enabled }}
+    $CONFIG['trusted_domains'] = array_values(array_unique(array_merge($CONFIG['trusted_domains'], ['127.0.0.1'])));
+    $CONFIG['trusted_proxies'] = array_values(array_unique(array_merge($CONFIG['trusted_proxies'], ['127.0.0.1', '::1'])));
+    {{- end }}
   php.ini: |
     ; SPDX-License-Identifier: Apache-2.0
     memory_limit={{ .Values.php.memoryLimit }}
@@ -54,6 +64,20 @@ data:
     Listen 8080
     IncludeOptional /etc/apache2/mods-enabled/*.load
     IncludeOptional /etc/apache2/mods-enabled/*.conf
+    {{- if .Values.notifyPush.enabled }}
+    <IfModule !proxy_module>
+      LoadModule proxy_module /usr/lib/apache2/modules/mod_proxy.so
+    </IfModule>
+    <IfModule !proxy_http_module>
+      LoadModule proxy_http_module /usr/lib/apache2/modules/mod_proxy_http.so
+    </IfModule>
+    <IfModule !proxy_wstunnel_module>
+      LoadModule proxy_wstunnel_module /usr/lib/apache2/modules/mod_proxy_wstunnel.so
+    </IfModule>
+    ProxyPass /push/ws ws://127.0.0.1:7867/ws
+    ProxyPass /push/ http://127.0.0.1:7867/
+    ProxyPassReverse /push/ http://127.0.0.1:7867/
+    {{- end }}
     User www-data
     Group www-data
     ServerTokens Prod
@@ -114,43 +138,22 @@ data:
   cron.sh: |
     #!/bin/bash
     # SPDX-License-Identifier: Apache-2.0
-    set -uo pipefail
-    proof="/var/www/html/.helmforge-quiescence/${POD_UID}"
-    mkdir -p "$proof"
-    rm -f "$proof/cron"
-    stopping=false
-    child=''
-    sleeping=false
-    stop() {
-      stopping=true
-      # Active PHP jobs must finish naturally. Only the inter-run sleep is canceled.
-      if "$sleeping" && [ -n "$child" ]; then kill -TERM "$child" 2>/dev/null || true; fi
-    }
-    trap stop TERM INT WINCH
-    sleeping=true
-    sleep {{ .Values.cron.initialDelay }} & child=$!; wait "$child"
-    sleeping=false
-    if "$stopping"; then printf 'graceful\n' > "$proof/cron"; exit 0; fi
-    while true; do
-      # Shared lock excludes the upstream bootstrap/upgrade writer.
-      (
-        flock -s 9
-        if [ -f /var/www/html/config/config.php ] && php /var/www/html/occ status --output=json | php -r '$s=json_decode(stream_get_contents(STDIN),true);exit(!($s["installed"]??false)||($s["maintenance"]??true)||($s["needsDbUpgrade"]??true));'; then
-          php /var/www/html/occ background:cron || exit $?
-          php -f /var/www/html/cron.php
-          status=$?
-          if [ "$status" -ne 0 ]; then exit "$status"; fi
-          date +%s > /tmp/nextcloud-cron-last-success
-        fi
-      ) 9>/var/www/html/nextcloud-init-sync.lock &
-      child=$!
-      wait "$child"
-      status=$?
-      if "$stopping"; then wait "$child"; status=$?; fi
-      if [ "$status" -ne 0 ]; then exit "$status"; fi
-      if "$stopping"; then printf 'graceful\n' > "$proof/cron"; exit 0; fi
-      sleeping=true
-      sleep {{ .Values.cron.interval }} & child=$!; wait "$child"
-      sleeping=false
-      if "$stopping"; then printf 'graceful\n' > "$proof/cron"; exit 0; fi
-    done
+    set -euo pipefail
+    # CronJob concurrencyPolicy does not cover manually instantiated Jobs.
+    exec 8>/var/www/html/nextcloud-cron-sync.lock
+    flock -x 8
+    if [ -d /var/www/html/.helmforge-backup-lock ]; then
+      echo 'Backup owns the volume; skipping this scheduled execution'
+      exit 0
+    fi
+    # Shared lock excludes the upstream bootstrap and upgrade writer.
+    exec 9>/var/www/html/nextcloud-init-sync.lock
+    flock -s 9
+    if [ ! -f /var/www/html/config/config.php ]; then
+      echo 'Nextcloud is not initialized; skipping this scheduled execution'
+      exit 0
+    fi
+    php /var/www/html/occ status --output=json | php -r '$s=json_decode(stream_get_contents(STDIN),true);exit(!($s["installed"]??false)||($s["maintenance"]??true)||($s["needsDbUpgrade"]??true));'
+    php /var/www/html/occ background:cron
+    php -d apc.enable_cli=1 -f /var/www/html/cron.php -- --verbose
+    echo 'Nextcloud background jobs completed successfully'

@@ -28,7 +28,7 @@ commonLabels: {}
 
 image:
   repository: docker.io/library/redis
-  tag: "8.10.1"
+  tag: "8.10.2"
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
@@ -130,6 +130,9 @@ sentinel:
     # -- Request Sentinel failover before voluntarily terminating the active master
     enabled: true
     maxAttempts: 12
+    # -- Seconds the active master keeps trying to hand over to an in-sync replica that Sentinel accepts.
+    # Keep replicaSyncTimeoutSeconds + 3 * maxAttempts + 5 below terminationGracePeriodSeconds.
+    replicaSyncTimeoutSeconds: 15
   startupFailoverGuard:
     # -- Prevent a fresh empty node from resuming as master while peers hold data
     enabled: true

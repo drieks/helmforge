@@ -28,7 +28,7 @@
 
 ## What HelmForge Provides
 
-HelmForge is a catalog of 116 Helm charts built around a consistent operating contract:
+HelmForge is a catalog of 128 Helm charts built around a consistent operating contract:
 official upstream images, pinned versions, explicit values, reproducible validation, and signed releases.
 
 Use HelmForge when you want charts that stay close to upstream applications while still behaving like a
@@ -71,9 +71,11 @@ Browse the full catalog with descriptions, install commands, values guidance, an
 
 Common categories include:
 
+- **Object storage**: [RustFS](charts/rustfs) for standalone/distributed S3-compatible storage and bucket/site replication.
 - **Data services**: PostgreSQL, MySQL, MariaDB, MongoDB, Redis, Valkey, Kafka, ZooKeeper, RabbitMQ, Elasticsearch, and Druid.
 - **Identity and access**: Keycloak, Authelia, OAuth2 Proxy, and application charts with ingress/auth patterns.
 - **Operations and automation**: n8n, Cronicle, FastMCP Server, Cloudflared, Velero, DDNS Updater, Envoy Gateway, and Envoy Gateway CRDs.
+- **Document management**: [Paperless-ngx](charts/paperless-ngx) for OCR, indexing, and archiving of scanned documents.
 - **Content and collaboration**: WordPress, Ghost, Drupal, Gitea, Wallabag, Castopod, Komga, and Open WebUI.
 - **Home automation**: Matterbridge and openHAB for Matter and broad smart-home platform integration.
 - **Reusable platform workloads**: the [`generic`](charts/generic) chart for internal services, workers, jobs, and sidecars.

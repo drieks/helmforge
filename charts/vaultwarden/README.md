@@ -51,6 +51,7 @@ helm install vaultwarden oci://ghcr.io/helmforgedev/helm/vaultwarden -f values.y
 - production should prefer an external database or one of the optional database subcharts
 - SQLite is the fallback mode when no external database or subchart is configured
 - built-in backup can archive `/data` for SQLite or run database dumps for DB-backed modes
+- S3 backup endpoints signed by a private CA can use a mounted CA Secret without disabling TLS verification
 - ingress and `domain` should be aligned for attachment links and client behavior
 - websocket traffic uses the same HTTP service and ingress path as the web vault
 - the pod binds Vaultwarden/Rocket to non-privileged container port `8085` by default while keeping the Kubernetes Service on port `80`
@@ -60,7 +61,21 @@ helm install vaultwarden oci://ghcr.io/helmforgedev/helm/vaultwarden -f values.y
 - Vaultwarden repository: <https://github.com/dani-garcia/vaultwarden>
 - Vaultwarden configuration template: <https://raw.githubusercontent.com/dani-garcia/vaultwarden/main/.env.template>
 - Vaultwarden 1.37.0 security release: <https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.0>
-- Vaultwarden 1.37.3 release: <https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.3>
+- Vaultwarden 1.37.4 release: <https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.4>
+
+## Upgrade notes for 1.37.4
+
+Vaultwarden 1.37.4 fixes high- and medium-severity authorization issues affecting
+revoked organization members, two-factor recovery, invitations, attachments,
+event logs and cipher sharing. If untrusted organization admins existed before
+the upgrade, rotate the organization API key afterward.
+
+When `IP_HEADER=X-Forwarded-For`, configure every proxy hop in
+`IP_HEADER_TRUSTED_PROXIES`; client IP selection now uses the rightmost untrusted
+address. Remove retired client feature flags and `DUO_USE_IFRAME` from custom
+configuration before saving settings. Review the
+[upstream release](https://github.com/dani-garcia/vaultwarden/releases/tag/1.37.4)
+and back up `/data` and the database before upgrading.
 
 ## Best practices
 
@@ -80,6 +95,7 @@ helm install vaultwarden oci://ghcr.io/helmforgedev/helm/vaultwarden -f values.y
 - in `sqlite` mode the chart archives `/data` and uploads it to the configured bucket
 - in `external`, `postgresql`, and `mysql` modes the chart runs a database dump and uploads the compressed result
 - the built-in backup path is intentionally focused on backup creation, not restore orchestration
+- prefer `backup.s3.caSecret` for private or self-signed certificate authorities; use `backup.s3.insecureSkipVerify` only as a temporary compatibility escape hatch
 - review [Backup Automation](docs/backup-automation.md) before enabling the CronJob in production
 
 ### Database selection
@@ -182,7 +198,7 @@ The admin page should not use a plain-text `ADMIN_TOKEN` in real environments. P
 Simple generation options:
 
 ```bash
-docker run --rm -it vaultwarden/server:1.37.3 /vaultwarden hash
+docker run --rm -it vaultwarden/server:1.37.4 /vaultwarden hash
 ```
 
 ```bash
@@ -218,7 +234,7 @@ Official reference:
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `image.repository` | Vaultwarden image repository | `docker.io/vaultwarden/server` |
-| `image.tag` | Vaultwarden image tag | `1.37.3` |
+| `image.tag` | Vaultwarden image tag | `1.37.4` |
 | `domain` | Public Vaultwarden domain | `""` |
 | `database.mode` | `auto`, `sqlite`, `external`, `postgresql`, or `mysql` | `auto` |
 | `database.external.vendor` | External database vendor | `postgres` |
@@ -270,6 +286,9 @@ Official reference:
 | `backup.schedule` | Backup schedule | `"0 0 * * *"` |
 | `backup.s3.endpoint` | S3-compatible endpoint URL | `""` |
 | `backup.s3.bucket` | Target bucket name | `""` |
+| `backup.s3.caSecret` | Secret containing the CA certificate trusted for the S3 endpoint | `""` |
+| `backup.s3.caKey` | Key containing the CA certificate in `backup.s3.caSecret` | `ca.crt` |
+| `backup.s3.insecureSkipVerify` | Disable TLS certificate verification for all `mc` operations; mutually exclusive with `caSecret` | `false` |
 | `backup.s3.existingSecret` | Existing secret with S3 credentials | `""` |
 | `database.sqlite.enableWal` | Enable SQLite WAL mode on startup | `true` |
 | `database.connection.retries` | Number of startup retries while connecting to the database | `15` |
@@ -306,6 +325,7 @@ The `ci/` scenarios validate the main chart behaviors:
 - `database-mysql.yaml`
 - `hardening.yaml`
 - `backup-sqlite.yaml`
+- `backup-tls.yaml`
 - `backup-postgresql.yaml`
 - `backup-mysql.yaml`
 
